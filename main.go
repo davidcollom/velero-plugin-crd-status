@@ -31,5 +31,6 @@ func main() {
 }
 
 func newCRDStatusRestoreItemAction(logger logrus.FieldLogger) (interface{}, error) {
+	// return nil, nil
 	return &restore.newCRDStatusRestoreItemAction{Log: logger}, nil
 }

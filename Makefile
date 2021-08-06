@@ -14,7 +14,7 @@ terraform-fmt:
 	terraform fmt terraform/
 
 velero-install: serviceaccount.json
-	velero install --provider gcp --bucket david-jetstack-velero-testing --plugins velero/velero-plugin-for-gcp:v1.0.0 --wait --secret-file ./serviceaccount.json
+	velero install --provider gcp --bucket david-jetstack-velero-testing --plugins velero/velero-plugin-for-gcp:v1.0.0,davidcollom/velero-plugin-crd-status:latest --wait --secret-file ./serviceaccount.json
 
 serviceaccount.json: terraform-apply
 	cd terraform; terraform output serviceaccount_key > ../serviceaccount.json
@@ -25,7 +25,10 @@ context:
 setup: terraform-apply build velero-install deploy-crds
 
 build:
-	CGO_ENABLED=0 go build \
+	CGO_ENABLED=0 \
+		GOOS=linux \
+		GOARCH=amd64 \
+		go build \
     -o velero-plugin-crd-status \
     -installsuffix "static" \
     -mod=readonly \
