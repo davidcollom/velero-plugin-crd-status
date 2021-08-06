@@ -1,0 +1,71 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argo-events
+---
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: system
+  namespace: velero
+spec:
+  schedule: "* * * * *"
+  template:
+    includedResources:
+    - "*"
+    excludedResources:
+    - "pods"
+    - "nodes"
+    - "events"
+    - "orders"
+    - "challenges"
+    - "certificaterequests"
+    - "workflows"
+    - "*.phoenix.defence.improbable.io"
+    - "FlowSchema"
+    - "PriorityLevelConfiguration"
+    - "*.gke.io"
+    - '*.apiserver.k8s.io'
+    excludedNamespaces:
+      - "default"
+      - "kube-node-lease"
+      - "kube-public"
+      - "kube-system"
+    includeClusterResources: true
+    snapshotVolumes: false
+    ttl: 1h
+---
+apiVersion: argoproj.io/v1alpha1
+kind: EventBus
+metadata:
+  name: hooks-eventbus
+  namespace: argo-events
+spec:
+  nats:
+    native:
+      # Optional, defaults to 3. If it is < 3, set it to 3, that is the minimal requirement.
+      replicas: 3
+      # Optional, authen strategy, "none" or "token", defaults to "none"
+      auth: none
+      antiAffinity: true
+status:
+  any:
+    data:
+      can:
+        go:
+          in: here
+---
+apiVersion: argoproj.io/v1alpha1
+kind: EventBus
+metadata:
+  name: platform-eventbus
+  namespace: argo-events
+spec:
+  nats:
+    native:
+      # Optional, defaults to 3. If it is < 3, set it to 3, that is the minimal requirement.
+      replicas: 3
+      # Optional, authen strategy, "none" or "token", defaults to "none"
+      auth: none
+      antiAffinity: true
