@@ -17,7 +17,7 @@ limitations under the License.
 package main
 
 import (
-	_ "github.com/davidcollom/velero-plugin-crd-status/internal/restore"
+	"github.com/davidcollom/velero-plugin-crd-status/internal/restore"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	veleroplugin "github.com/vmware-tanzu/velero/pkg/plugin/framework"
@@ -26,11 +26,19 @@ import (
 func main() {
 	veleroplugin.NewServer().
 		BindFlags(pflag.CommandLine).
-		RegisterRestoreItemAction("velero.io/crd-status-restorer", newCRDStatusRestoreItemAction).
+		RegisterRestoreItemAction("jetstack.io/crd-status-restorer", newCRDStatusRestoreItemAction).
+		RegisterRestoreItemAction("jetstack.io/creation-timestamp-annotation", newResourceCreationTimestamp).
+		RegisterRestoreItemAction("jetstack.io/last-known-annotation", newResourceLastKnownAnnotation).
 		Serve()
 }
 
 func newCRDStatusRestoreItemAction(logger logrus.FieldLogger) (interface{}, error) {
-	// return nil, nil
-	return &restore.newCRDStatusRestoreItemAction{Log: logger}, nil
+	return &restore.CRDStatusRestoreItemAction{Log: logger}, nil
+}
+
+func newResourceCreationTimestamp(logger logrus.FieldLogger) (interface{}, error) {
+	return &restore.ResourceCreationTimestamp{Log: logger}, nil
+}
+func newResourceLastKnownAnnotation(logger logrus.FieldLogger) (interface{}, error) {
+	return &restore.ResourceLastKnownAnnotation{Log: logger}, nil
 }

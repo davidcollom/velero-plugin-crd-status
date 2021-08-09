@@ -36,8 +36,12 @@ build:
 	docker build -t davidcollom/velero-plugin-crd-status:latest .
 	kind load docker-image davidcollom/velero-plugin-crd-status:latest
 
+restart: build
+	kubectl delete pods --all -n velero
+
+
 deploy-crds:
-	kubectl apply -k github.com/argoproj/argo-events/manifests/base/crds/?ref=master§
+	kubectl apply -k github.com/argoproj/argo-events/manifests/base/crds/?ref=master
 
 backup:
 	velero backup create --from-schedule=system

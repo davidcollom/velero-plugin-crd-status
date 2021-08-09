@@ -17,25 +17,14 @@ limitations under the License.
 package restore
 
 import (
-	"encoding/json"
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	"go.etcd.io/etcd/error"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	"github.com/vmware-tanzu/velero/pkg/plugin/velero"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const (
-// AnnBindCompleted      = "pv.kubernetes.io/bind-completed"
-// AnnBoundByController  = "pv.kubernetes.io/bound-by-controller"
-// AnnStorageProvisioner = "volume.beta.kubernetes.io/storage-provisioner"
-// AnnSelectedNode       = "volume.kubernetes.io/selected-node"
-)
-
-// newCRDStatusRestoreItemAction is a restore item action plugin for Velero
+// CRDStatusRestoreItemAction is a restore item action plugin for Velero
 type CRDStatusRestoreItemAction struct {
 	Log logrus.FieldLogger
 }
@@ -46,52 +35,69 @@ func (p *CRDStatusRestoreItemAction) AppliesTo() (velero.ResourceSelector, error
 	return velero.ResourceSelector{}, nil
 }
 
-// func resourceHasStatusSubResource() bool {
-// 	return false
-// }
-
-func isCustomResource(item runtime.Unstructured) bool {
-	apiversion, _, err := unstructured.NestedString(item.UnstructuredContent(), "apiversion")
+func isCustomResource(apiversion string) bool {
 	apiGroups := strings.SplitN(apiversion, "/", 2)
 
 	// If we have no `/` assume we're using something like v1
-	if len(apiGroups) == 1 { return false }
+	if len(apiGroups) == 1 {
+		return false
+	}
 	// Its a core API
-	if apiGroups[0] == "v1" { return false }
+	if apiGroups[0] == "v1" {
+		return false
+	}
 	// If it has .k8s.io
-	if strings.HasSuffix(apiGroups[0], ".k8s.io") { return false}
+	if strings.HasSuffix(apiGroups[0], ".k8s.io") {
+		return false
+	}
 
 	// All else fails, assume we're working with a CR
 	return true
 }
 
-func hasStatusField(item runtime.Unstructured) bool {
-	_, status_field, err := unstructured.NestedSlice(item.UnstructuredContent(), "status")
-	return status_field
-}
-
 // Execute modifies the PVC's spec to use the volumesnapshot object as the data source ensuring that the newly provisioned volume
 // can be pre-populated with data from the volumesnapshot.
 func (p *CRDStatusRestoreItemAction) Execute(input *velero.RestoreItemActionExecuteInput) (*velero.RestoreItemActionExecuteOutput, error) {
-	name, _, err := unstructured.NestedString(input.Item.UnstructuredContent(), "metadata", "name")
-	namespace, _, err := unstructured.NestedString(input.Item.UnstructuredContent(), "metadata", "namespace")
 
-	res := input.Item
+	res := input.Item.UnstructuredContent()
+	origRes := input.ItemFromBackup.UnstructuredContent()
+	name, _, _ := unstructured.NestedString(res, "metadata", "name")
+	namespace, _, _ := unstructured.NestedString(res, "metadata", "namespace")
+	kind, _, _ := unstructured.NestedString(res, "kind")
+	apiversion, _, _ := unstructured.NestedString(res, "apiVersion")
 
-	p.Log.Infof("Starting CRDStatusRestoreItemAction for Resource %s/%s", itemJSON["metadata"]["namespace"], itemJSON["metadata"]["name"])
+	log := p.Log.WithFields(logrus.Fields{
+		"name":       name,
+		"namespace":  namespace,
+		"kind":       kind,
+		"apiversion": apiversion,
+		"plugin":     "CRDStatusRestoreItemAction",
+	})
 
-	if !isCustomResource(input.Item) {
+	log.Infof("Starting CRDStatusRestoreItemAction")
+
+	if !isCustomResource(apiversion) {
+		log.Infof("Resource is not a custom Resource")
 		return &velero.RestoreItemActionExecuteOutput{
 			UpdatedItem: input.Item,
 		}, nil
 	}
-	if hasStatusField(input.item){
 
+	log.Infof("Checking if Resource had a status field")
+	statusField, found, err := unstructured.NestedMap(origRes, "status")
+	if err != nil {
+		return &velero.RestoreItemActionExecuteOutput{
+			UpdatedItem: input.Item,
+		}, err
+	}
+	if found {
+		log.Infof("Re-setting status field: %v", statusField)
+		unstructured.SetNestedMap(res, statusField, "status")
 	}
 
-	p.Log.Infof("Returning from CRDStatusRestoreItemAction for PVC %s/%s", itemJSON["metadata"]["namespace"], itemJSON["metadata"]["name"]))
+	log.Infof("Returning from CRDStatusRestoreItemAction")
 
 	return &velero.RestoreItemActionExecuteOutput{
-		UpdatedItem: &unstructured.Unstructured{Object: pvcMap},
+		UpdatedItem: &unstructured.Unstructured{Object: res},
 	}, nil
 }
