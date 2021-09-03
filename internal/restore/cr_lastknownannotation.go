@@ -31,10 +31,12 @@ type ResourceLastKnownAnnotation struct {
 	Log logrus.FieldLogger
 }
 
+// AppliesTo returns information indicating that the ResourceLastKnownAnnotation should be run while restoring all resources.
 func (p *ResourceLastKnownAnnotation) AppliesTo() (velero.ResourceSelector, error) {
 	return velero.ResourceSelector{}, nil
 }
 
+// Execute removes the kubectl last-applied-configuration annotations to work around: https://feichashao.com/kubectl-apply-fail/
 func (p *ResourceLastKnownAnnotation) Execute(input *velero.RestoreItemActionExecuteInput) (*velero.RestoreItemActionExecuteOutput, error) {
 
 	res := input.Item.UnstructuredContent()

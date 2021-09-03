@@ -35,6 +35,8 @@ func (p *CRDStatusRestoreItemAction) AppliesTo() (velero.ResourceSelector, error
 	return velero.ResourceSelector{}, nil
 }
 
+// isCustomResource performs arbitrary checks to see if it is a potential CustomResource
+// We can't check the cluster, because said CRD may not have been restored yet.
 func isCustomResource(apiversion string) bool {
 	apiGroups := strings.SplitN(apiversion, "/", 2)
 
@@ -55,8 +57,7 @@ func isCustomResource(apiversion string) bool {
 	return true
 }
 
-// Execute modifies the PVC's spec to use the volumesnapshot object as the data source ensuring that the newly provisioned volume
-// can be pre-populated with data from the volumesnapshot.
+// Execute modifies the Resources spec to include the original status field (If was was present at time of backup)
 func (p *CRDStatusRestoreItemAction) Execute(input *velero.RestoreItemActionExecuteInput) (*velero.RestoreItemActionExecuteOutput, error) {
 
 	res := input.Item.UnstructuredContent()
@@ -93,6 +94,8 @@ func (p *CRDStatusRestoreItemAction) Execute(input *velero.RestoreItemActionExec
 	if found {
 		log.Infof("Re-setting status field: %v", statusField)
 		unstructured.SetNestedMap(res, statusField, "status")
+	} else {
+		log.Infof("No status field found.")
 	}
 
 	log.Infof("Returning from CRDStatusRestoreItemAction")

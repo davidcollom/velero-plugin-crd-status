@@ -28,18 +28,16 @@ const (
 	AnnPreviousTimestamp = "jetstack.io/original-timestamp"
 )
 
-// newCRDStatusRestoreItemAction is a restore item action plugin for Velero
 type ResourceCreationTimestamp struct {
 	Log logrus.FieldLogger
 }
 
-// AppliesTo returns information indicating that the CRDStatusRestoreItemAction should be run while restoring PVCs.
+// AppliesTo returns information indicating that the ResourceCreationTimestamp should be run while restoring a Resource.
 func (p *ResourceCreationTimestamp) AppliesTo() (velero.ResourceSelector, error) {
 	return velero.ResourceSelector{}, nil
 }
 
-// Execute modifies the PVC's spec to use the volumesnapshot object as the data source ensuring that the newly provisioned volume
-// can be pre-populated with data from the volumesnapshot.
+// Execute takes the metadata.creationTimestamp from the backup and adds to a custom annoation (ensuring that it is NOT overridden)
 func (p *ResourceCreationTimestamp) Execute(input *velero.RestoreItemActionExecuteInput) (*velero.RestoreItemActionExecuteOutput, error) {
 
 	res := input.Item.UnstructuredContent()
@@ -68,6 +66,14 @@ func (p *ResourceCreationTimestamp) Execute(input *velero.RestoreItemActionExecu
 	if !found {
 		log.Infof("Annotations not found, initializing")
 		annotations = make(map[string]string)
+	}
+
+	_, ok := annotations[AnnPreviousTimestamp]
+	if ok {
+		log.Infof("Skipping resource due to annoation already existing.")
+		return &velero.RestoreItemActionExecuteOutput{
+			UpdatedItem: &unstructured.Unstructured{Object: res},
+		}, nil
 	}
 
 	log.Infof("Looking for original creationTimestamp")
