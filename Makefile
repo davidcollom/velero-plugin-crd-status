@@ -11,7 +11,7 @@ terraform-apply: terraform-init
 
 .PHONY: terraform-plan
 terraform-plan: terraform-init
-	cd terraform; terraform plan .
+	cd terraform; terraform plan --var=cluster_name=$(KIND_CLUSTER_NAME) .
 
 .PHONY: terraform-fmt
 terraform-fmt:
@@ -29,7 +29,7 @@ context:
 	kubectx kind-$(KIND_CLUSTER_NAME)
 
 .PHONY: setup
-setup: terraform-apply build velero-install deploy-crds
+setup: terraform-apply build velero-install deploy
 
 .PHONY: build
 build:
@@ -52,6 +52,11 @@ restart: build
 deploy-crds: context
 	kubectl apply -k github.com/argoproj/argo-events/manifests/base/crds/?ref=master
 	kubectl apply -k github.com/argoproj/argo-workflows/manifests/base/crds/minimal?ref=master
+	kubectl apply -f examples/crds.yaml
+
+.PHONY: deploy
+deploy: deploy-crds
+	kubectl apply -f examples/examples.yaml
 
 .PHONY: backup
 backup: context

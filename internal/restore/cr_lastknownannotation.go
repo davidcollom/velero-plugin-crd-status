@@ -70,7 +70,7 @@ func (p *ResourceLastKnownAnnotation) Execute(input *velero.RestoreItemActionExe
 
 	_, ok := annotations[AnnToRemove]
 	if ok {
-		log.Infof("Removing %s annoation", AnnToRemove)
+		log.Infof("Removing %s annotation", AnnToRemove)
 		delete(annotations, AnnToRemove)
 	}
 

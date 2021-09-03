@@ -22,7 +22,6 @@ spec:
     - "challenges"
     - "certificaterequests"
     - "workflows"
-    - "*.phoenix.defence.improbable.io"
     - "FlowSchema"
     - "PriorityLevelConfiguration"
     - "*.gke.io"
@@ -35,45 +34,6 @@ spec:
     includeClusterResources: true
     snapshotVolumes: false
     ttl: 1h
----
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: examplecrd.proj.io
-spec:
-  conversion:
-    strategy: None
-  group: proj.io
-  names:
-    kind: examplecrd
-    listKind: exampleCRDList
-    plural: examplecrd
-    singular: examplecrd
-  scope: Namespaced
-  versions:
-  - name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        properties:
-          apiVersion:
-            type: string
-          kind:
-            type: string
-          metadata:
-            type: object
-          spec:
-            type: object
-            x-kubernetes-preserve-unknown-fields: true
-          status:
-            type: object
-            x-kubernetes-preserve-unknown-fields: true
-        required:
-        - metadata
-        - spec
-        type: object
-    served: true
-    storage: true
-    subresources: {}
 ---
 apiVersion: proj.io/v1alpha1
 kind: examplecrd
@@ -94,6 +54,8 @@ status:
       can:
         go:
           in: here
+          and:
+            - in here
 ---
 apiVersion: proj.io/v1alpha1
 kind: examplecrd
@@ -105,6 +67,4 @@ spec:
     native:
       # Optional, defaults to 3. If it is < 3, set it to 3, that is the minimal requirement.
       replicas: 3
-      # Optional, authen strategy, "none" or "token", defaults to "none"
-      auth: none
       antiAffinity: true

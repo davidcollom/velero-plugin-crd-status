@@ -85,7 +85,7 @@ func (p *ResourceCreationTimestamp) Execute(input *velero.RestoreItemActionExecu
 		}, err
 	}
 	if found {
-		log.Infof("Adding Annoation %s", AnnPreviousTimestamp)
+		log.Infof("Adding Annotation %s", AnnPreviousTimestamp)
 		annotations[AnnPreviousTimestamp] = originalCreationTimestamp
 	}
 	log.Infof("About to set Annotations too (%v)", annotations)
