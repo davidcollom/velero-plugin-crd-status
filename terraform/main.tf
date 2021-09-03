@@ -37,6 +37,10 @@ resource "google_service_account_key" "velero_kind" {
   service_account_id = google_service_account.velero.name
 }
 
-output "serviceaccount_key" {
-  value = base64decode(google_service_account_key.velero_kind.private_key)
+
+# Create a cluster with kind of the name "test-cluster" with kubernetes version v1.16.1
+resource "kind_cluster" "velero" {
+  name           = "${var.cluster_name}"
+  node_image     = "kindest/node:v1.21.1"
+  wait_for_ready = true
 }
