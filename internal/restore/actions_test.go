@@ -32,9 +32,9 @@ func TestIsCustomResource(t *testing.T) {
 		want       bool
 	}{
 		{name: "core API version", apiVersion: "v1", want: false},
-		{name: "Kubernetes API group", apiVersion: "apps/v1", want: false},
 		{name: "Kubernetes API group suffix", apiVersion: "example.k8s.io/v1", want: false},
 		{name: "version without group", apiVersion: "v1alpha1", want: false},
+		{name: "group not in exclusion list", apiVersion: "apps/v1", want: true},
 		{name: "custom API group", apiVersion: "example.io/v1alpha1", want: true},
 	}
 
@@ -50,11 +50,11 @@ func TestIsCustomResource(t *testing.T) {
 func TestCRDStatusRestoreItemActionExecute(t *testing.T) {
 	originalStatus := map[string]interface{}{"phase": "Ready"}
 	tests := []struct {
-		name           string
-		apiVersion     string
-		currentStatus  map[string]interface{}
-		backupStatus   map[string]interface{}
-		wantStatus     map[string]interface{}
+		name          string
+		apiVersion    string
+		currentStatus map[string]interface{}
+		backupStatus  map[string]interface{}
+		wantStatus    map[string]interface{}
 	}{
 		{
 			name:          "restores custom resource status from backup",
@@ -65,7 +65,7 @@ func TestCRDStatusRestoreItemActionExecute(t *testing.T) {
 		},
 		{
 			name:          "does not change built-in resource status",
-			apiVersion:    "apps/v1",
+			apiVersion:    "networking.k8s.io/v1",
 			currentStatus: map[string]interface{}{"phase": "Current"},
 			backupStatus:  originalStatus,
 			wantStatus:    map[string]interface{}{"phase": "Current"},
@@ -85,7 +85,10 @@ func TestCRDStatusRestoreItemActionExecute(t *testing.T) {
 				"kind":       "Example",
 				"metadata":   map[string]interface{}{"name": "example"},
 			}
-			backup := map[string]interface{}{"status": test.backupStatus}
+			backup := map[string]interface{}{}
+			if test.backupStatus != nil {
+				backup["status"] = test.backupStatus
+			}
 			if test.currentStatus != nil {
 				current["status"] = test.currentStatus
 			}
@@ -128,16 +131,19 @@ func TestCRDStatusRestoreItemActionExecuteInvalidBackupStatus(t *testing.T) {
 
 func TestResourceCreationTimestampExecute(t *testing.T) {
 	tests := []struct {
-		name                string
+		name               string
 		currentAnnotations map[string]interface{}
-		backupTimestamp     string
-		wantAnnotations     map[string]string
+		backupTimestamp    string
+		wantAnnotations    map[string]string
 	}{
 		{
-			name:            "adds original timestamp and preserves annotations",
+			name: "adds original timestamp and preserves annotations",
+			currentAnnotations: map[string]interface{}{
+				"example.io/keep": "yes",
+			},
 			backupTimestamp: "2020-01-02T03:04:05Z",
 			wantAnnotations: map[string]string{
-				"example.io/keep":  "yes",
+				"example.io/keep":    "yes",
 				AnnPreviousTimestamp: "2020-01-02T03:04:05Z",
 			},
 		},
@@ -212,7 +218,7 @@ func TestResourceLastKnownAnnotationExecute(t *testing.T) {
 		{
 			name: "removes last-applied annotation and preserves others",
 			annotations: map[string]interface{}{
-				AnnToRemove:      `{"kind":"Example"}`,
+				AnnToRemove:       `{"kind":"Example"}`,
 				"example.io/keep": "yes",
 			},
 			wantAnnotations: map[string]string{"example.io/keep": "yes"},
@@ -270,7 +276,7 @@ func TestResourceLastKnownAnnotationExecuteInvalidAnnotations(t *testing.T) {
 
 func executeInput(current, backup map[string]interface{}) *velero.RestoreItemActionExecuteInput {
 	return &velero.RestoreItemActionExecuteInput{
-		Item:         &unstructured.Unstructured{Object: current},
+		Item:           &unstructured.Unstructured{Object: current},
 		ItemFromBackup: &unstructured.Unstructured{Object: backup},
 	}
 }
